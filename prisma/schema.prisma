@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  admin
+  user
+  other
+}
+
+model User {
+  id       String @id @default(cuid())
+  username String @unique
+  password String
+
+  role      UserRole @default(admin)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Room {
+  id   String @id @default(cuid())
+  name String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adminMessage String? // message affiché à l'entrée du labyrinthe, modifiable par l'admin
+
+  // relations
+  exits   RoomExit[] @relation("FromRoom")
+  entries RoomExit[] @relation("ToRoom")
+}
+
+enum DirectionType {
+  LEFT
+  RIGHT
+  UP
+  DOWN
+}
+
+model RoomExit {
+  id String @id @default(cuid())
+
+  fromRoomId String
+  toRoomId   String
+
+  direction DirectionType
+
+  fromRoom Room @relation("FromRoom", fields: [fromRoomId], references: [id], onDelete: Cascade)
+  toRoom   Room @relation("ToRoom", fields: [toRoomId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([fromRoomId, direction]) // une seule sortie par direction
+}
