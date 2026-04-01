@@ -69,8 +69,8 @@ router.post("/auth", async (req, res) => {
 router.post("/logout", (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
-    secure: false, // true en production
-    sameSite: "lax",
+    secure: true, // true en production
+    sameSite: "none",
   });
 
   console.log("User logged out, token cookie cleared");
