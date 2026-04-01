@@ -15,53 +15,33 @@ router.get("/", (req, res) => {
 
 // LOGIN USER
 router.post("/auth", async (req, res) => {
-  const body = req.body;
   try {
-    const revalidated = UserLoginSchema.safeParse(body);
+    const { username, password } = req.body;
 
-    if (!revalidated.success) {
-      return res.status(400).json(revalidated.error);
+    const user = await prisma.user.findUnique({ where: { username } });
+
+    if (!user || user.password !== password) {
+      return res.status(401).json({ message: "Identifiants invalides" });
     }
 
-    const { password, username }: UserLoginType = revalidated.data;
-
-    const result = await prisma.user.findUnique({
-      where: {
-        username,
-      },
-    });
-
-    if (!result || result.password !== password) {
-      return res
-        .status(401)
-        .json({ message: "Identifiants invalides", token: null });
-    }
-
+    // Générer token
     const token = jwt.sign(
-      {
-        username,
-      },
-      SECRET_KEY,
+      { userId: user.id, username },
+      SECRET_KEY!,
+      { expiresIn: "7d" }, // durée optionnelle
     );
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true, // true en production (HTTPS)
-      sameSite: "none",
-      // maxAge: 1000 * 60 * 60, // 1h
-    });
+    console.log(`${token} logged in, token generated`);
 
-    console.log("User logged in, token cookie set:", token);
-
-    return res.status(200).json({
-      message: "Connexion reussie !",
+    // On renvoie le token dans le body
+    res.status(200).json({
+      message: "Connexion réussie",
+      token,
+      user: { id: user.id, username },
     });
-  } catch (error) {
-    console.error("ERROR LOGIN:", error);
-    res.status(500).json({
-      message: "Erreur serveur",
-      error: String(error),
-    });
+  } catch (err) {
+    console.error("ERROR LOGIN:", err);
+    res.status(500).json({ message: "Erreur serveur", error: String(err) });
   }
 });
 
